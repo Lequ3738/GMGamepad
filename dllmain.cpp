@@ -17,6 +17,12 @@ constexpr int DefinedButtonOffset = 100;
 constexpr int DefinedAxisOffset = DefinedButtonOffset + SDL_GAMEPAD_BUTTON_COUNT;
 constexpr int ButtonCount = DefinedAxisOffset + SDL_GAMEPAD_AXIS_COUNT + 3;
 
+// 0 - 59: 手柄的原始按钮值
+// 60 - 79: 手柄的原始摇杆值
+// 80 - 99: 手柄的原始方向键值
+constexpr int JoystickAxisOffset = 60;
+constexpr int JoystickHatOffset = 80;
+
 enum ExtraSDL
 {
 	SDL_GAMEPAD_BUTTON_ANY = 132,
@@ -34,7 +40,7 @@ struct GMGamepad
 
 	double deadzone = 0.05;
 	double threshold = 0.05;
-	std::array<int, ButtonCount> button_events;
+	std::array<char, ButtonCount> button_events;
 };
 
 std::vector<GMGamepad> sticks;
@@ -524,6 +530,8 @@ expReal gamepad_update()
 			}
 
 			sticks[joyid].button_events[my_event.gbutton.button + DefinedButtonOffset] |= 0b101;
+			sticks[joyid].button_events[SDL_GAMEPAD_BUTTON_ANY] |= 0b101;
+			sticks[joyid].button_events[SDL_GAMEPAD_ANY] |= 0b101;
 			break;
 		}
 		case SDL_EVENT_GAMEPAD_BUTTON_UP:
@@ -542,6 +550,15 @@ expReal gamepad_update()
 			auto buttonEvent = &sticks[joyid].button_events[my_event.gbutton.button + DefinedButtonOffset];
 			*buttonEvent &= 0b011;  // 关闭按钮事件
 			*buttonEvent |= 0b010;  // 打开按钮放开事件
+
+			buttonEvent = &sticks[joyid].button_events[SDL_GAMEPAD_BUTTON_ANY];
+			*buttonEvent &= 0b011;
+			*buttonEvent |= 0b010;
+
+			buttonEvent = &sticks[joyid].button_events[SDL_GAMEPAD_ANY];
+			*buttonEvent &= 0b011;
+			*buttonEvent |= 0b010;
+
 			break;
 		}
 		case SDL_EVENT_GAMEPAD_AXIS_MOTION:
@@ -559,13 +576,25 @@ expReal gamepad_update()
 
 			GMReal value = LerpAxisValue(joyid, (SDL_GamepadAxis)my_event.gaxis.axis, (GMReal)my_event.gaxis.value / 32767);
 			auto buttonEvent = &sticks[joyid].button_events[my_event.gaxis.axis + DefinedAxisOffset];
-			
+			auto anyAxisEvent = &sticks[joyid].button_events[SDL_GAMEPAD_AXIS_ANY];
+			auto anyEvent = &sticks[joyid].button_events[SDL_GAMEPAD_ANY];
+
 			if (fabs(value) > 0 && (*buttonEvent & 0b100) == 0)  // 摇杆刚开始运动
-				*buttonEvent |= 0b101;  // 打开按钮按下事件，并打开按钮事件
-			else if (value == 0 && (*buttonEvent & 0b100) == 1)  // 摇杆结束运动，回到原位
 			{
-				*buttonEvent &= 0b011;  // 关闭按钮事件
+				*buttonEvent |= 0b101;  // 打开按钮按下事件，并打开摇杆状态
+				*anyAxisEvent |= 0b101;
+				*anyEvent |= 0b101;
+			}
+			else if (value == 0 && (*buttonEvent & 0b100) != 0)  // 摇杆结束运动，回到原位
+			{
+				*buttonEvent &= 0b011;  // 关闭摇杆状态
 				*buttonEvent |= 0b010;  // 打开按钮放开事件
+
+				*anyAxisEvent &= 0b011;
+				*anyAxisEvent |= 0b010;
+
+				*anyEvent &= 0b011;
+				*anyEvent |= 0b010;
 			}
 
 			break;
@@ -587,8 +616,12 @@ expReal gamepad_update()
 
 			sticks[joyid].button_events[my_event.jbutton.button] |= 0b101;
 			
-			sticks[joyid].button_events[SDL_GAMEPAD_BUTTON_ANY] |= 0b101;
-			sticks[joyid].button_events[SDL_GAMEPAD_ANY] |= 0b101;
+			if (sticks[joyid].gamepad == nullptr)
+			{
+				sticks[joyid].button_events[SDL_GAMEPAD_BUTTON_ANY] |= 0b101;
+				sticks[joyid].button_events[SDL_GAMEPAD_ANY] |= 0b101;
+			}
+
 			break;
 		}
 		case SDL_EVENT_JOYSTICK_BUTTON_UP:
@@ -608,13 +641,17 @@ expReal gamepad_update()
 			*buttonEvent &= 0b011;  // 关闭按钮事件
 			*buttonEvent |= 0b010;  // 打开按钮放开事件
 			
-			buttonEvent = &sticks[joyid].button_events[SDL_GAMEPAD_BUTTON_ANY];
-			*buttonEvent &= 0b011;
-			*buttonEvent |= 0b010;
+			if (sticks[joyid].gamepad == nullptr)
+			{
+				buttonEvent = &sticks[joyid].button_events[SDL_GAMEPAD_BUTTON_ANY];
+				*buttonEvent &= 0b011;
+				*buttonEvent |= 0b010;
 
-			buttonEvent = &sticks[joyid].button_events[SDL_GAMEPAD_ANY];
-			*buttonEvent &= 0b011;
-			*buttonEvent |= 0b010;
+				buttonEvent = &sticks[joyid].button_events[SDL_GAMEPAD_ANY];
+				*buttonEvent &= 0b011;
+				*buttonEvent |= 0b010;
+			}
+
 			break;
 		}
 		case SDL_EVENT_JOYSTICK_AXIS_MOTION:
@@ -630,9 +667,13 @@ expReal gamepad_update()
 				}
 			}
 
+			if (sticks[joyid].gamepad != nullptr)
+				break;
+
 			GMReal value = (GMReal)my_event.jaxis.value / 32767;
 			value = lerp(sticks[joyid].deadzone, 1, 0, 1, fabs(value))* sign(value);
-			auto buttonEvent = &sticks[joyid].button_events[my_event.jaxis.axis];
+
+			auto buttonEvent = &sticks[joyid].button_events[JoystickAxisOffset + my_event.jaxis.axis];
 			auto anyAxisEvent = &sticks[joyid].button_events[SDL_GAMEPAD_AXIS_ANY];
 			auto anyEvent = &sticks[joyid].button_events[SDL_GAMEPAD_ANY];
 
@@ -642,7 +683,7 @@ expReal gamepad_update()
 				*anyAxisEvent |= 0b101;
 				*anyEvent |= 0b101;
 			}
-			else if (value == 0 && (*buttonEvent & 0b100) == 1)  // 摇杆结束运动，回到原位
+			else if (value == 0 && (*buttonEvent & 0b100) != 0)  // 摇杆结束运动，回到原位
 			{
 				*buttonEvent &= 0b011;  // 关闭摇杆状态
 				*buttonEvent |= 0b010;  // 打开按钮放开事件
@@ -652,6 +693,89 @@ expReal gamepad_update()
 
 				*anyEvent &= 0b011;
 				*anyEvent |= 0b010;
+			}
+
+			break;
+		}
+		case SDL_EVENT_JOYSTICK_HAT_MOTION:
+		{
+			SDL_Joystick* joy = SDL_GetJoystickFromID(my_event.jhat.which);
+			int joyid = 0;
+			for (uint i = 0; i < sticks.size(); i++)
+			{
+				if (sticks[i].joystick == joy)
+				{
+					joyid = i;
+					break;
+				}
+			}
+
+			if (sticks[joyid].gamepad != nullptr)
+				break;
+
+			auto hatEventUp = &sticks[joyid].button_events[JoystickHatOffset + my_event.jhat.hat * 4];
+			auto hatEventDown = &sticks[joyid].button_events[JoystickHatOffset + my_event.jhat.hat * 4 + 1];
+			auto hatEventLeft = &sticks[joyid].button_events[JoystickHatOffset + my_event.jhat.hat * 4 + 2];
+			auto hatEventRight = &sticks[joyid].button_events[JoystickHatOffset + my_event.jhat.hat * 4 + 3];
+			auto anyButtonEvent = &sticks[joyid].button_events[SDL_GAMEPAD_BUTTON_ANY];
+			auto anyEvent = &sticks[joyid].button_events[SDL_GAMEPAD_ANY];
+
+			auto value = my_event.jhat.value;
+			if (value == SDL_HAT_UP || value == SDL_HAT_LEFTUP || value == SDL_HAT_RIGHTUP)
+			{
+				if ((*hatEventUp & 0b100) == 0)
+				{
+					*hatEventUp |= 0b101;  // 打开按钮按下事件，并打开方向键状态
+					*anyButtonEvent |= 0b101;
+					*anyEvent |= 0b101;
+				}
+				else
+				{
+					*hatEventUp &= 0b011;  // 关闭按钮事件
+					*hatEventUp |= 0b001;  // 打开按钮按下事件
+				}
+			}
+			if (value == SDL_HAT_DOWN || value == SDL_HAT_LEFTDOWN || value == SDL_HAT_RIGHTDOWN)
+			{
+				if ((*hatEventDown & 0b100) == 0)
+				{
+					*hatEventDown |= 0b101;  // 打开按钮按下事件，并打开方向键状态
+					*anyButtonEvent |= 0b101;
+					*anyEvent |= 0b101;
+				}
+				else
+				{
+					*hatEventDown &= 0b011;  // 关闭按钮事件
+					*hatEventDown |= 0b001;  // 打开按钮按下事件
+				}
+			}
+			if (value == SDL_HAT_LEFT || value == SDL_HAT_LEFTUP || value == SDL_HAT_LEFTDOWN)
+			{
+				if ((*hatEventLeft & 0b100) == 0)
+				{
+					*hatEventLeft |= 0b101;  // 打开按钮按下事件，并打开方向键状态
+					*anyButtonEvent |= 0b101;
+					*anyEvent |= 0b101;
+				}
+				else
+				{
+					*hatEventLeft &= 0b011;  // 关闭按钮事件
+					*hatEventLeft |= 0b001;  // 打开按钮按下事件
+				}
+			}
+			if (value == SDL_HAT_RIGHT || value == SDL_HAT_RIGHTUP || value == SDL_HAT_RIGHTDOWN)
+			{
+				if ((*hatEventRight & 0b100) == 0)
+				{
+					*hatEventRight |= 0b101;  // 打开按钮按下事件，并打开方向键状态
+					*anyButtonEvent |= 0b101;
+					*anyEvent |= 0b101;
+				}
+				else
+				{
+					*hatEventRight &= 0b011;  // 关闭按钮事件
+					*hatEventRight |= 0b001;  // 打开按钮按下事件
+				}
 			}
 
 			break;
