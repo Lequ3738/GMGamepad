@@ -546,6 +546,22 @@ int GetJoystickID(SDL_JoystickID id)
 	return -1;
 }
 
+expReal gamepad_clear(GMReal id)
+{
+	try
+	{
+		GMGamepad& stick = sticks.at((int)id);
+		for (uint i = 0; i < ButtonCount; i++)
+			stick.button_events[i] = 0;
+
+		return 1;
+	}
+	catch (...)
+	{
+		return 0;
+	}
+}
+
 expReal gamepad_update()
 {
 	bool change = false;
