@@ -89,7 +89,7 @@ expReal gamepad_is_supported(GMReal id)
 {
 	try
 	{
-		return sticks.at((int)id).gamepad != nullptr;
+		return sticks.at((uint)id).gamepad != nullptr;
 	}
 	catch (...)
 	{
@@ -103,7 +103,7 @@ expString gamepad_get_description(GMReal id)
 {
 	try
 	{
-		return SDL_GetJoystickName(sticks.at((int)id).joystick);
+		return SDL_GetJoystickName(sticks.at((uint)id).joystick);
 	}
 	catch (...)
 	{
@@ -115,10 +115,10 @@ expReal gamepad_get_type(GMReal id)
 {
 	try
 	{
-		if (sticks.at((int)id).gamepad == nullptr)
+		if (sticks.at((uint)id).gamepad == nullptr)
 			return SDL_GAMEPAD_TYPE_UNKNOWN;
 
-		return SDL_GetGamepadType(sticks.at((int)id).gamepad);
+		return SDL_GetGamepadType(sticks.at((uint)id).gamepad);
 	}
 	catch (...)
 	{
@@ -131,9 +131,9 @@ expString gamepad_get_guid(GMReal id)
 	if (id < 0 || id >= sticks.size())
 		return "device index out of range";
 
-	SDL_GUID guid = SDL_GetJoystickGUID(sticks[(int)id].joystick);
+	SDL_GUID guid = SDL_GetJoystickGUID(sticks[(uint)id].joystick);
 	bool error = true;
-	for (int i = 0; i < 16; ++i)
+	for (uint i = 0; i < 16; ++i)
 	{
 		if (guid.data[i] != 0)
 		{
@@ -155,7 +155,7 @@ expReal gamepad_get_id(GMReal id)
 	if (id < 0 || id >= sticks.size())
 		return -1;
 
-	return SDL_GetJoystickID(sticks[(int)id].joystick);
+	return SDL_GetJoystickID(sticks[(uint)id].joystick);
 }
 
 expReal gamepad_get_axis_deadzone(GMReal id)
@@ -163,7 +163,7 @@ expReal gamepad_get_axis_deadzone(GMReal id)
 	if (id < 0 || id >= sticks.size())
 		return 0;
 
-	return sticks[(int)id].deadzone;
+	return sticks[(uint)id].deadzone;
 }
 
 expReal gamepad_set_axis_deadzone(GMReal id, GMReal deadzone)
@@ -171,7 +171,7 @@ expReal gamepad_set_axis_deadzone(GMReal id, GMReal deadzone)
 	if (id < 0 || id >= sticks.size())
 		return 0;
 
-	sticks[(int)id].deadzone = SDL_clamp(deadzone, 0.0, 1.0);
+	sticks[(uint)id].deadzone = SDL_clamp(deadzone, 0.0, 1.0);
 	return 1;
 }
 
@@ -183,21 +183,21 @@ expReal gamepad_axis_value(GMReal id, GMReal axis)
 	double value;
 	if ((int)axis < DefinedAxisOffset)
 	{
-		value = (double)SDL_GetJoystickAxis(sticks[(int)id].joystick, (int)axis - JoystickAxisOffset) / 32767;
+		value = (double)SDL_GetJoystickAxis(sticks[(uint)id].joystick, (int)axis - JoystickAxisOffset) / 32767;
 		value = SDL_clamp(value, -1.0, 1.0);
 	}
 	else
 	{
 		SDL_GamepadAxis axis_enum = (SDL_GamepadAxis)((int)axis - DefinedAxisOffset);
 
-		value = (double)SDL_GetGamepadAxis(sticks[(int)id].gamepad, axis_enum) / 32767;
+		value = (double)SDL_GetGamepadAxis(sticks[(uint)id].gamepad, axis_enum) / 32767;
 		value = SDL_clamp(value, -1.0, 1.0);
 	}
 
-	if (fabs(value) < sticks[(int)id].deadzone)
+	if (fabs(value) < sticks[(uint)id].deadzone)
 		return 0;
 
-	value = lerp(sticks[(int)id].deadzone, 1, 0, 1, fabs(value)) * sign(value);
+	value = lerp(sticks[(uint)id].deadzone, 1, 0, 1, fabs(value)) * sign(value);
 	return value;
 }
 
@@ -211,7 +211,7 @@ expReal gamepad_button_check_direct(GMReal id, GMReal button)
 	if (input < DefinedButtonOffset)
 	{
 		if (input < JoystickAxisOffset)
-			return SDL_GetJoystickButton(sticks[(int)id].joystick, input);
+			return SDL_GetJoystickButton(sticks[(uint)id].joystick, input);
 		else if (input < JoystickHatOffset)
 		{
 			GMReal value = gamepad_axis_value(id, input);
@@ -219,7 +219,7 @@ expReal gamepad_button_check_direct(GMReal id, GMReal button)
 		}
 		else
 		{
-			int mask = SDL_GetJoystickHat(sticks[(int)id].joystick, (input - JoystickHatOffset) / 4);
+			int mask = SDL_GetJoystickHat(sticks[(uint)id].joystick, (input - JoystickHatOffset) / 4);
 			auto list = GamepadGetHat(mask, 0, 1, 2, 3);
 			for (auto inp : list)
 			{
@@ -227,10 +227,10 @@ expReal gamepad_button_check_direct(GMReal id, GMReal button)
 					return 1;  // 按下
 			}
 		}
-		return SDL_GetJoystickButton(sticks[(int)id].joystick, input);
+		return SDL_GetJoystickButton(sticks[(uint)id].joystick, input);
 	}
 	else if (input < DefinedAxisOffset)
-		return SDL_GetGamepadButton(sticks[(int)id].gamepad, (SDL_GamepadButton)(input - DefinedButtonOffset));
+		return SDL_GetGamepadButton(sticks[(uint)id].gamepad, (SDL_GamepadButton)(input - DefinedButtonOffset));
 	else if (input < DefinedAxisOffset + SDL_GAMEPAD_AXIS_COUNT)
 	{
 		GMReal value = gamepad_axis_value(id, input);
@@ -244,7 +244,7 @@ expReal gamepad_button_check(GMReal id, GMReal button)
 {
 	try
 	{
-		return (sticks.at((int)id).button_events.at((int)button) & 0b100) != 0;
+		return (sticks.at((uint)id).button_events.at((uint)button) & 0b100) != 0;
 	}
 	catch (...)
 	{
@@ -256,7 +256,7 @@ expReal gamepad_button_check_pressed(GMReal id, GMReal button)
 {
 	try
 	{
-		return (sticks.at((int)id).button_events.at((int)button) & 0b001) != 0;
+		return (sticks.at((uint)id).button_events.at((uint)button) & 0b001) != 0;
 	}
 	catch (...)
 	{
@@ -268,7 +268,7 @@ expReal gamepad_button_check_released(GMReal id, GMReal button)
 {
 	try
 	{
-		return (sticks.at((int)id).button_events.at((int)button) & 0b010) != 0;
+		return (sticks.at((uint)id).button_events.at((uint)button) & 0b010) != 0;
 	}
 	catch (...)
 	{
@@ -276,7 +276,7 @@ expReal gamepad_button_check_released(GMReal id, GMReal button)
 	}
 }
 
-int GamepadGetOriginalIndex(int id, int button, int* any = nullptr)
+int GamepadGetOriginalIndex(uint id, int button, int* any = nullptr)
 {
 	if (button < DefinedButtonOffset || button >= DefinedAxisOffset + SDL_GAMEPAD_AXIS_COUNT)
 		return -1;
@@ -354,17 +354,17 @@ expReal gamepad_button_press(GMReal id, GMReal button)
 
 	try
 	{
-		sticks.at((int)id).button_events[(int)button] |= 0b101;
-		sticks.at((int)id).button_events[SDL_GAMEPAD_ANY] |= 0b101;
+		sticks.at((uint)id).button_events[(uint)button] |= 0b101;
+		sticks.at((uint)id).button_events[SDL_GAMEPAD_ANY] |= 0b101;
 
 		// 如果是受支持的手柄且传入游戏手柄按钮常量，则原始索引也会打开事件
 		int anyindex;
-		int index = GamepadGetOriginalIndex((int)id, (int)button, &anyindex);
+		int index = GamepadGetOriginalIndex((uint)id, (int)button, &anyindex);
 		if (index >= 0)
-			sticks.at((int)id).button_events[index] |= 0b101;
+			sticks.at((uint)id).button_events[index] |= 0b101;
 
 		if (anyindex != SDL_GAMEPAD_BUTTON_INVALID)
-			sticks.at((int)id).button_events[anyindex] |= 0b101;
+			sticks.at((uint)id).button_events[anyindex] |= 0b101;
 		
 		return 1;
 	}
@@ -381,27 +381,27 @@ expReal gamepad_button_release(GMReal id, GMReal button)
 
 	try
 	{
-		auto event = &sticks.at((int)id).button_events[(int)button];
+		auto event = &sticks.at((uint)id).button_events[(uint)button];
 		*event &= 0b011;  // 关闭按钮事件
 		*event |= 0b010;  // 打开按钮放开事件
 
-		event = &sticks.at((int)id).button_events[SDL_GAMEPAD_ANY];
+		event = &sticks.at((uint)id).button_events[SDL_GAMEPAD_ANY];
 		*event &= 0b011;
 		*event |= 0b010;
 
 		// 如果是受支持的手柄且传入游戏手柄按钮常量，则原始索引也会打开事件
 		int anyindex;
-		int index = GamepadGetOriginalIndex((int)id, (int)button, &anyindex);
+		int index = GamepadGetOriginalIndex((uint)id, (int)button, &anyindex);
 		if (index >= 0)
 		{
-			event = &sticks.at((int)id).button_events[index];
+			event = &sticks.at((uint)id).button_events[index];
 			*event &= 0b011;
 			*event |= 0b010;
 		}
 
 		if (anyindex != SDL_GAMEPAD_BUTTON_INVALID)
 		{
-			event = &sticks.at((int)id).button_events[anyindex];
+			event = &sticks.at((uint)id).button_events[anyindex];
 			*event &= 0b011;
 			*event |= 0b010;
 		}
@@ -423,7 +423,7 @@ expReal gamepad_set_vibration(GMReal id, GMReal low, GMReal high, GMReal len)
 	Uint16 high_strength = (Uint16)(SDL_clamp(high * 65535, 0, 65535));
 	Uint32 len_ms = (Uint32)(max(0, len * 1000));
 
-	return SDL_RumbleJoystick(sticks[(int)id].joystick, low_strength, high_strength, len_ms);
+	return SDL_RumbleJoystick(sticks[(uint)id].joystick, low_strength, high_strength, len_ms);
 }
 
 expReal gamepad_set_color(GMReal id, GMReal col)
@@ -436,7 +436,7 @@ expReal gamepad_set_color(GMReal id, GMReal col)
 	Uint8 g = (Uint8)((color >> 8) & 0xFF);
 	Uint8 r = (Uint8)(color & 0xFF);
 
-	return SDL_SetJoystickLED(sticks[(int)id].joystick, r, g, b);
+	return SDL_SetJoystickLED(sticks[(uint)id].joystick, r, g, b);
 }
 
 expReal gamepad_axis_count(GMReal id)
@@ -444,7 +444,7 @@ expReal gamepad_axis_count(GMReal id)
 	if (id < 0 || id >= sticks.size())
 		return 0;
 
-	return SDL_GetNumJoystickAxes(sticks[(int)id].joystick);
+	return SDL_GetNumJoystickAxes(sticks[(uint)id].joystick);
 }
 
 expReal gamepad_button_count(GMReal id)
@@ -452,7 +452,7 @@ expReal gamepad_button_count(GMReal id)
 	if (id < 0 || id >= sticks.size())
 		return 0;
 
-	return SDL_GetNumJoystickButtons(sticks[(int)id].joystick);
+	return SDL_GetNumJoystickButtons(sticks[(uint)id].joystick);
 }
 
 expReal gamepad_hat_count(GMReal id)
@@ -460,14 +460,14 @@ expReal gamepad_hat_count(GMReal id)
 	if (id < 0 || id >= sticks.size())
 		return 0;
 
-	return SDL_GetNumJoystickHats(sticks[(int)id].joystick);
+	return SDL_GetNumJoystickHats(sticks[(uint)id].joystick);
 }
 
 expReal gamepad_get_inputs_index(GMReal id, GMReal button)
 {
 	try
 	{
-		return GamepadGetOriginalIndex((int)id, (int)button);
+		return GamepadGetOriginalIndex((uint)id, (int)button);
 	}
 	catch (...)
 	{
@@ -480,10 +480,10 @@ expString gamepad_get_mapping(GMReal id)
 	if (id < 0 || id >= sticks.size())
 		return "device index out of range";
 
-	if (sticks[(int)id].gamepad == nullptr)
+	if (sticks[(uint)id].gamepad == nullptr)
 		return "no mapping";
 
-	GMString mapping = SDL_GetGamepadMapping(sticks[(int)id].gamepad);
+	GMString mapping = SDL_GetGamepadMapping(sticks[(uint)id].gamepad);
 	if (mapping == nullptr)
 		return "no mapping";
 
@@ -495,19 +495,19 @@ expReal gamepad_test_mapping(GMReal id, GMString mapping)
 	if (id < 0 || id >= sticks.size())
 		return 0;
 
-	SDL_JoystickID joy_id = SDL_GetJoystickID(sticks[(int)id].joystick);
+	SDL_JoystickID joy_id = SDL_GetJoystickID(sticks[(uint)id].joystick);
 	bool result = SDL_SetGamepadMapping(joy_id, mapping);
 	if (!result)
 		return 0;
 
-	if (sticks[(int)id].gamepad == nullptr)
+	if (sticks[(uint)id].gamepad == nullptr)
 	{
 		// 尝试打开手柄
 		SDL_Gamepad* gamepad = SDL_OpenGamepad(joy_id);
 		if (gamepad == nullptr)
 			return 0;
 
-		sticks[(int)id].gamepad = gamepad;
+		sticks[(uint)id].gamepad = gamepad;
 	}
 
 	return 1;
@@ -518,7 +518,7 @@ expReal gamepad_remove_mapping(GMReal id)
 	if (id < 0 || id >= sticks.size())
 		return 0;
 
-	SDL_JoystickID joy_id = SDL_GetJoystickID(sticks[(int)id].joystick);
+	SDL_JoystickID joy_id = SDL_GetJoystickID(sticks[(uint)id].joystick);
 	return SDL_SetGamepadMapping(joy_id, nullptr);
 }
 
@@ -550,7 +550,7 @@ expReal gamepad_clear(GMReal id)
 {
 	try
 	{
-		GMGamepad& stick = sticks.at((int)id);
+		GMGamepad& stick = sticks.at((uint)id);
 		for (uint i = 0; i < ButtonCount; i++)
 			stick.button_events[i] = 0;
 

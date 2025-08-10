@@ -13,4 +13,7 @@
 
 使用 Visual Studio 2022 进行编译。
 
-要下载  [SDL3](https://github.com/libsdl-org/SDL/releases/tag/release-3.2.18)，将其中的 `SDL3.dll` 和 `SDL3.lib` 放置在工程文件夹下。
+并且要下载  [SDL3](https://github.com/libsdl-org/SDL/releases/tag/release-3.2.18)，将其中的 `SDL3.dll` 和 `SDL3.lib` 放置在工程文件夹下。
+
+## 如何使用
+插件的详细用法请参见插件文件夹下的 `GM_Gamepad.chm` 文档。
