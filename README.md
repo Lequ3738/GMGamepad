@@ -11,9 +11,14 @@
 
 ## 如何编译
 
-使用 Visual Studio 2022 进行编译。
+使用 Visual Studio 2022 进行编译。<br>
+注意要使用 x86 平台进行编译，因为 GameMaker 8.0 是 32 位程序。
 
 并且要下载  [SDL3](https://github.com/libsdl-org/SDL/releases/tag/release-3.2.18)，将其中的 `SDL3.dll` 和 `SDL3.lib` 放置在工程文件夹下。
 
 ## 如何使用
 插件的详细用法请参见插件文件夹下的 `GM_Gamepad.chm` 文档。
+
+## 感谢
+感谢以下项目提供的灵感和代码参考：
+- [**jm82joy**](https://github.com/GM82Project/gm82joy)
